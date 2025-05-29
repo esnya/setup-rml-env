@@ -55,6 +55,9 @@ runs:
       shell: pwsh
       run: |
         $resonitePath = "${{ inputs.resonite-path }}"
+        if ($resonitePath[-1] -ne [IO.Path]::DirectorySeparatorChar) {
+          $resonitePath += [IO.Path]::DirectorySeparatorChar
+        }
         $librariesPath = Join-Path $resonitePath "Libraries"
         $rmlLibsPath = Join-Path $resonitePath "rml_libs"
 
