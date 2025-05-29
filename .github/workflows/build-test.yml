@@ -54,7 +54,7 @@ jobs:
 
       - name: Build Release configuration
         shell: pwsh
-        working-directory: TestProject/EsnyaResoniteModTemplate
+        working-directory: TestProject
         env:
           ResonitePath: ${{ steps.setup-resonite.outputs.resonite-path }}
         run: |
@@ -65,7 +65,7 @@ jobs:
 
       - name: Test Install target (Release)
         shell: pwsh
-        working-directory: TestProject/EsnyaResoniteModTemplate
+        working-directory: TestProject
         env:
           ResonitePath: ${{ steps.setup-resonite.outputs.resonite-path }}
         run: |
@@ -137,7 +137,7 @@ jobs:
 
       - name: Build Debug configuration
         shell: pwsh
-        working-directory: TestProject/EsnyaResoniteModTemplate
+        working-directory: TestProject
         env:
           ResonitePath: ${{ steps.setup-resonite.outputs.resonite-path }}
         run: |
@@ -148,7 +148,7 @@ jobs:
 
       - name: Test Install target (Debug)
         shell: pwsh
-        working-directory: TestProject/EsnyaResoniteModTemplate
+        working-directory: TestProject
         env:
           ResonitePath: ${{ steps.setup-resonite.outputs.resonite-path }}
         run: |
@@ -220,7 +220,7 @@ jobs:
 
       - name: Quick build test
         shell: pwsh
-        working-directory: TestProject/EsnyaResoniteModTemplate
+        working-directory: TestProject
         env:
           ResonitePath: ${{ steps.setup-resonite.outputs.resonite-path }}
         run: |
@@ -261,7 +261,7 @@ jobs:
 
       - name: Test Release configuration
         shell: pwsh
-        working-directory: TestProject/EsnyaResoniteModTemplate
+        working-directory: TestProject
         env:
           ResonitePath: ${{ steps.setup-resonite.outputs.resonite-path }}
         run: |
@@ -273,7 +273,7 @@ jobs:
 
       - name: Test Debug configuration
         shell: pwsh
-        working-directory: TestProject/EsnyaResoniteModTemplate
+        working-directory: TestProject
         env:
           ResonitePath: ${{ steps.setup-resonite.outputs.resonite-path }}
         run: |
