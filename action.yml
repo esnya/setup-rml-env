@@ -54,7 +54,7 @@ runs:
       id: setup-paths
       shell: pwsh
       run: |
-        $resonitePath = Join-Path "${{ inputs.resonite-path }}" "Resonite"
+        $resonitePath = "${{ inputs.resonite-path }}"
         $librariesPath = Join-Path $resonitePath "Libraries"
         $rmlLibsPath = Join-Path $resonitePath "rml_libs"
 
