@@ -40,7 +40,7 @@ jobs:
         id: setup-resonite
         uses: ./
         with:
-          resonite-path: ${{ github.workspace }}/Resonite
+          resonite-path: ${{ github.workspace }}/TestProject/Resonite
           steam-login: ${{ secrets.STEAMLOGIN }}
 
       - name: Verify outputs
@@ -61,7 +61,7 @@ jobs:
         run: |
           echo "::group::Testing Release build with dotnet CLI"
           dotnet restore
-          dotnet build --configuration Release --no-restore -p:ResonitePath="${{ steps.setup-resonite.outputs.resonite-path }}"
+          dotnet build --configuration Release --no-restore
           echo "::endgroup::"
 
       - name: Test Install target (Release)
@@ -72,7 +72,7 @@ jobs:
         run: |
           echo "::group::Testing Install target with Release configuration"
           # Note: Assumes project has Install target defined in .csproj
-          dotnet msbuild -target:Install -property:Configuration=Release -property:ResonitePath="${{ steps.setup-resonite.outputs.resonite-path }}" -verbosity:normal
+          dotnet msbuild -target:Install -property:Configuration=Release -verbosity:normal
           echo "✓ Install target succeeded (Release)"
           echo "::endgroup::"
 
@@ -120,7 +120,7 @@ jobs:
         id: setup-resonite
         uses: ./
         with:
-          resonite-path: ${{ github.workspace }}/Resonite
+          resonite-path: ${{ github.workspace }}/TestProject/Resonite
           steam-login: ${{ secrets.STEAMLOGIN }}
           hot-reload-lib: true
 
@@ -145,7 +145,7 @@ jobs:
         run: |
           echo "::group::Testing Debug build with dotnet CLI"
           dotnet restore
-          dotnet build --configuration Debug --no-restore -p:ResonitePath="${{ steps.setup-resonite.outputs.resonite-path }}"
+          dotnet build --configuration Debug --no-restore
           echo "::endgroup::"
 
       - name: Test Install target (Debug)
@@ -155,7 +155,7 @@ jobs:
           ResonitePath: ${{ steps.setup-resonite.outputs.resonite-path }}
         run: |
           echo "::group::Testing Install target with Debug configuration"
-          dotnet msbuild -target:Install -property:Configuration=Debug -property:ResonitePath="${{ steps.setup-resonite.outputs.resonite-path }}" -verbosity:normal
+          dotnet msbuild -target:Install -property:Configuration=Debug -verbosity:normal
           echo "✓ Install target succeeded (Debug)"
           echo "::endgroup::"
 
@@ -203,7 +203,7 @@ jobs:
         id: setup-resonite
         uses: ./
         with:
-          resonite-path: ${{ github.workspace }}/Resonite
+          resonite-path: ${{ github.workspace }}/TestProject/Resonite
           steam-login: ${{ secrets.STEAMLOGIN }}
           hot-reload-lib: true
           hot-reload-version: "2.4.0"
@@ -229,7 +229,7 @@ jobs:
         run: |
           echo "::group::Quick build test with custom versions"
           dotnet restore
-          dotnet build --configuration Release --no-restore -p:ResonitePath="${{ steps.setup-resonite.outputs.resonite-path }}"
+          dotnet build --configuration Release --no-restore
           echo "✓ Build completed successfully"
           echo "::endgroup::"
 
@@ -260,7 +260,7 @@ jobs:
         id: setup-resonite
         uses: ./
         with:
-          resonite-path: ${{ github.workspace }}/Resonite
+          resonite-path: ${{ github.workspace }}/TestProject/Resonite
           steam-login: ${{ secrets.STEAMLOGIN }}
 
       - name: Test Release configuration
@@ -271,7 +271,7 @@ jobs:
         run: |
           echo "::group::Testing Release configuration"
           dotnet restore
-          dotnet build --configuration Release --no-restore -p:ResonitePath="${{ steps.setup-resonite.outputs.resonite-path }}"
+          dotnet build --configuration Release --no-restore
           echo "✓ Release build completed"
           echo "::endgroup::"
 
@@ -282,7 +282,7 @@ jobs:
           ResonitePath: ${{ steps.setup-resonite.outputs.resonite-path }}
         run: |
           echo "::group::Testing Debug configuration"
-          dotnet build --configuration Debug --no-restore -p:ResonitePath="${{ steps.setup-resonite.outputs.resonite-path }}"
+          dotnet build --configuration Debug --no-restore
           echo "✓ Debug build completed"
           echo "::endgroup::"
 
