@@ -1,67 +1,216 @@
-name: Build RML Mod
-description: Build Mod for ResoniteModLoader. Use after checkout.
+name: Setup Resonite Mod Environment
+description: Setup and cache Resonite game files and ResoniteModLoader for mod development
 inputs:
-  project:
-    description: 'Path to the project directory'
-    required: true
-    default: ${{ github.workspace }}
-  configuration:
-    description: 'Build configuration'
-    required: true
-    default: 'Release'
-  target-dir:
-    description: 'Output directory for the build'
-    required: true
+  resonite-path:
+    description: 'Path to the directory where Resonite will be installed'
+    required: false
+    default: ${{ github.workspace }}/Resonite
 
   steam-login:
-    description: 'Login credentials for SteamCMD. "<username> <password>"'
+    description: 'Login credentials for SteamCMD. Format: "<username> <password>"'
     required: true
+
   app-id:
-    description: 'Steam App ID'
-    required: true
+    description: 'Steam App ID for Resonite'
+    required: false
     default: '2519830'
 
   cache-key:
-    description: 'Cache key for the app'
-    required: true
+    description: 'Custom cache key for the Resonite installation. If not provided, auto-generated from app-id'
+    required: false
+
+  rml-version:
+    description: 'ResoniteModLoader version to install (latest, or specific version like v2.0.0)'
+    required: false
+    default: 'latest'
+
+  hot-reload-lib:
+    description: 'Whether to install ResoniteHotReloadLib (true/false)'
+    required: false
+    default: 'false'
+
+  hot-reload-version:
+    description: 'ResoniteHotReloadLib version to install (latest, or specific version like v3.0.0-RML)'
+    required: false
+    default: 'latest'
+
+outputs:
+  resonite-path:
+    description: 'Path to the installed Resonite directory'
+    value: ${{ steps.setup-paths.outputs.resonite-path }}
+  libraries-path:
+    description: 'Path to the Resonite Libraries directory'
+    value: ${{ steps.setup-paths.outputs.libraries-path }}
+  rml-libs-path:
+    description: 'Path to the ResoniteModLoader libraries directory'
+    value: ${{ steps.setup-paths.outputs.rml-libs-path }}
+  cache-hit:
+    description: 'Whether the cache was hit for Resonite installation'
+    value: ${{ steps.cache-resonite.outputs.cache-hit }}
 runs:
   using: 'composite'
   steps:
-    - name: Setup MSBuild.exe
-      uses: microsoft/setup-msbuild@v2
+    - name: Setup paths
+      id: setup-paths
+      shell: pwsh
+      run: |
+        $resonitePath = Join-Path "${{ inputs.resonite-path }}" "Resonite"
+        $librariesPath = Join-Path $resonitePath "Libraries"
+        $rmlLibsPath = Join-Path $resonitePath "rml_libs"
+
+        echo "resonite-path=$resonitePath" >> $env:GITHUB_OUTPUT
+        echo "libraries-path=$librariesPath" >> $env:GITHUB_OUTPUT
+        echo "rml-libs-path=$rmlLibsPath" >> $env:GITHUB_OUTPUT
+
+        echo "::notice::Resonite will be installed to: $resonitePath"
 
     - name: Setup SteamCMD
       uses: CyberAndrii/setup-steamcmd@v1.2.0
 
-    - name: Cache app
+    - name: Cache Resonite installation
+      id: cache-resonite
       uses: actions/cache@v4
       with:
-        path: ${{ inputs.project }}/Resonite/
-        key: ${{ inputs.cache-key || format('rml-mod-{0}-{1}', inputs.app-id, inputs.configuration) }}
+        path: ${{ steps.setup-paths.outputs.resonite-path }}
+        key: ${{ inputs.cache-key || format('resonite-{0}', inputs.app-id) }}
+        restore-keys: |
+          resonite-${{ inputs.app-id }}-
+          resonite-
 
-    - name: Update app
+    - name: Download and install Resonite
+      if: steps.cache-resonite.outputs.cache-hit != 'true'
       shell: pwsh
-      run: steamcmd +force_install_dir ${{ inputs.project }}/Resonite +login ${{ inputs.steam-login }} +app_update ${{ inputs.app-id }} validate +quit
+      run: |
+        echo "::group::Installing Resonite via SteamCMD"
+        steamcmd +force_install_dir "${{ steps.setup-paths.outputs.resonite-path }}" +login ${{ inputs.steam-login }} +app_update ${{ inputs.app-id }} validate +quit
+        echo "::endgroup::"
 
     - name: Prepare directories
       shell: pwsh
       run: |
-        mkdir -p ${{ inputs.project }}/Resonite/Libraries/
-        mkdir -p ${{ inputs.project }}/Resonite/rml_libs/
-      continue-on-error: true
+        New-Item -ItemType Directory -Path "${{ steps.setup-paths.outputs.libraries-path }}" -Force
+        New-Item -ItemType Directory -Path "${{ steps.setup-paths.outputs.rml-libs-path }}" -Force
+        echo "::notice::Created required directories"
 
     - name: Install ResoniteModLoader
       shell: pwsh
       run: |
-        Invoke-WebRequest -Uri https://github.com/resonite-modding-group/ResoniteModLoader/releases/latest/download/ResoniteModLoader.dll -OutFile ${{ inputs.project }}/Resonite/Libraries/ResoniteModLoader.dll
-        Invoke-WebRequest -Uri https://github.com/resonite-modding-group/ResoniteModLoader/releases/latest/download/0Harmony.dll -OutFile ${{ inputs.project }}/Resonite/rml_libs/0Harmony.dll
+        echo "::group::Installing ResoniteModLoader"
 
-    - name: Restore the application
-      shell: pwsh
-      run: msbuild /t:Restore /p:Configuration=${{ inputs.configuration }}
-      working-directory: ${{ inputs.project }}
+        $rmlVersion = "${{ inputs.rml-version }}"
+        $baseUrl = "https://github.com/resonite-modding-group/ResoniteModLoader/releases"
 
-    - name: Build the application
+        if ($rmlVersion -eq "latest") {
+          $downloadUrl = "$baseUrl/latest/download"
+        } else {
+          $downloadUrl = "$baseUrl/download/$rmlVersion"
+        }
+
+        $rmlDllPath = Join-Path "${{ steps.setup-paths.outputs.libraries-path }}" "ResoniteModLoader.dll"
+        $harmonyDllPath = Join-Path "${{ steps.setup-paths.outputs.rml-libs-path }}" "0Harmony.dll"
+
+        echo "Downloading ResoniteModLoader.dll..."
+        Invoke-WebRequest -Uri "$downloadUrl/ResoniteModLoader.dll" -OutFile $rmlDllPath
+
+        echo "Downloading 0Harmony.dll..."
+        Invoke-WebRequest -Uri "$downloadUrl/0Harmony.dll" -OutFile $harmonyDllPath
+
+        echo "::notice::ResoniteModLoader $rmlVersion installed successfully"
+        echo "::endgroup::"
+
+    - name: Install ResoniteHotReloadLib
+      if: inputs.hot-reload-lib == 'true'
       shell: pwsh
-      run: msbuild ${{ inputs.project }} /p:Configuration=${{ inputs.configuration }} /p:OutputPath=${{ inputs.target-dir || format('{0}/bin/{1}', github.workspace, inputs.configuration) }}
-      working-directory: ${{ inputs.project }}
+      run: |
+        echo "::group::Installing ResoniteHotReloadLib"
+
+        $hotReloadVersion = "${{ inputs.hot-reload-version }}"
+        $baseUrl = "https://github.com/Nytra/ResoniteHotReloadLib/releases"
+
+        if ($hotReloadVersion -eq "latest") {
+          # Get the latest release tag
+          $latestRelease = Invoke-RestMethod -Uri "$baseUrl/latest" -Headers @{ "Accept" = "application/vnd.github.v3+json" }
+          $hotReloadVersion = $latestRelease.tag_name
+          echo "Latest ResoniteHotReloadLib version: $hotReloadVersion"
+        }
+
+        $downloadUrl = "$baseUrl/download/$hotReloadVersion"
+        $rmlLibsPath = "${{ steps.setup-paths.outputs.rml-libs-path }}"
+
+        # Download ResoniteHotReloadLib.dll
+        $hotReloadDllPath = Join-Path $rmlLibsPath "ResoniteHotReloadLib.dll"
+        echo "Downloading ResoniteHotReloadLib.dll..."
+        Invoke-WebRequest -Uri "$downloadUrl/ResoniteHotReloadLib.dll" -OutFile $hotReloadDllPath
+
+        # Check if this version has Core.dll (v3.0.0-RML and later)
+        if ($hotReloadVersion -like "*-RML*" -or ($hotReloadVersion -match "v?(\d+)\.(\d+)\.(\d+)" -and [version]"$($Matches[1]).$($Matches[2]).$($Matches[3])" -ge [version]"3.0.0")) {
+          $hotReloadCoreDllPath = Join-Path $rmlLibsPath "ResoniteHotReloadLibCore.dll"
+          echo "Downloading ResoniteHotReloadLibCore.dll..."
+          try {
+            Invoke-WebRequest -Uri "$downloadUrl/ResoniteHotReloadLibCore.dll" -OutFile $hotReloadCoreDllPath
+            echo "✓ ResoniteHotReloadLibCore.dll downloaded"
+          } catch {
+            echo "::warning::ResoniteHotReloadLibCore.dll not found for version $hotReloadVersion, skipping..."
+          }
+        }
+
+        echo "::notice::ResoniteHotReloadLib $hotReloadVersion installed successfully"
+        echo "::endgroup::"
+
+    - name: Verify installation
+      shell: pwsh
+      run: |
+        echo "::group::Verifying installation"
+
+        $resonitePath = "${{ steps.setup-paths.outputs.resonite-path }}"
+        $librariesPath = "${{ steps.setup-paths.outputs.libraries-path }}"
+        $rmlLibsPath = "${{ steps.setup-paths.outputs.rml-libs-path }}"
+
+        # Check Resonite executable
+        $resoniteExe = Join-Path $resonitePath "Resonite.exe"
+        if (Test-Path $resoniteExe) {
+          echo "✓ Resonite.exe found"
+        } else {
+          echo "::error::Resonite.exe not found at $resoniteExe"
+          exit 1
+        }
+
+        # Check ResoniteModLoader
+        $rmlDll = Join-Path $librariesPath "ResoniteModLoader.dll"
+        if (Test-Path $rmlDll) {
+          echo "✓ ResoniteModLoader.dll found"
+        } else {
+          echo "::error::ResoniteModLoader.dll not found at $rmlDll"
+          exit 1
+        }
+
+        # Check 0Harmony
+        $harmonyDll = Join-Path $rmlLibsPath "0Harmony.dll"
+        if (Test-Path $harmonyDll) {
+          echo "✓ 0Harmony.dll found"
+        } else {
+          echo "::error::0Harmony.dll not found at $harmonyDll"
+          exit 1
+        }
+
+        # Check ResoniteHotReloadLib (if enabled)
+        if ("${{ inputs.hot-reload-lib }}" -eq "true") {
+          $hotReloadDll = Join-Path $rmlLibsPath "ResoniteHotReloadLib.dll"
+          if (Test-Path $hotReloadDll) {
+            echo "✓ ResoniteHotReloadLib.dll found"
+          } else {
+            echo "::error::ResoniteHotReloadLib.dll not found at $hotReloadDll"
+            exit 1
+          }
+
+          # Check Core.dll for newer versions
+          $hotReloadCoreDll = Join-Path $rmlLibsPath "ResoniteHotReloadLibCore.dll"
+          if (Test-Path $hotReloadCoreDll) {
+            echo "✓ ResoniteHotReloadLibCore.dll found"
+          } else {
+            echo "ℹ ResoniteHotReloadLibCore.dll not found (may not be available for this version)"
+          }
+        }
+
+        echo "::notice::All components verified successfully"
+        echo "::endgroup::"

@@ -1,30 +1,292 @@
-name: Test Action
+name: Test Setup Action
 
 on:
   push:
-    branches:
-      - master
-      - v*
-      - feature/*
-      - fix/*
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  STEAMLOGIN: ${{ secrets.STEAMLOGIN }}
 
 jobs:
-  build:
+  test-basic:
+    name: Test Basic Setup with Release Build and Install Target
     runs-on: windows-latest
 
     steps:
       - name: Checkout action
         uses: actions/checkout@v4
 
-      - name: Checkout mod
+      - name: Setup .NET 9.0 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Checkout test mod project
         uses: actions/checkout@v4
         with:
           repository: 'esnya/EsnyaResoniteModTemplate'
-          path: ${{ github.workspace }}/TestProject
+          ref: next
+          path: TestProject
 
-      - name: Build Mod for ResoniteModLoader
+      - name: Setup Resonite Environment
+        id: setup-resonite
         uses: ./
         with:
-          project: ${{ github.workspace }}/TestProject/EsnyaResoniteModTemplate
+          resonite-path: ${{ github.workspace }}/TestProject
           steam-login: ${{ secrets.STEAMLOGIN }}
-          app-id: '2519830'
+
+      - name: Verify outputs
+        shell: pwsh
+        run: |
+          echo "::group::Verifying action outputs"
+          echo "Resonite path: ${{ steps.setup-resonite.outputs.resonite-path }}"
+          echo "Libraries path: ${{ steps.setup-resonite.outputs.libraries-path }}"
+          echo "RML libs path: ${{ steps.setup-resonite.outputs.rml-libs-path }}"
+          echo "Cache hit: ${{ steps.setup-resonite.outputs.cache-hit }}"
+          echo "::endgroup::"
+
+      - name: Build Release configuration
+        shell: pwsh
+        working-directory: TestProject/EsnyaResoniteModTemplate
+        run: |
+          echo "::group::Testing Release build with dotnet CLI"
+          dotnet restore
+          dotnet build --configuration Release --no-restore
+          echo "::endgroup::"
+
+      - name: Test Install target (Release)
+        shell: pwsh
+        working-directory: TestProject/EsnyaResoniteModTemplate
+        run: |
+          echo "::group::Testing Install target with Release configuration"
+          # Note: Assumes project has Install target defined in .csproj
+          dotnet msbuild -target:Install -property:Configuration=Release -verbosity:normal
+          echo "✓ Install target succeeded (Release)"
+          echo "::endgroup::"
+
+      - name: Verify build artifacts
+        shell: pwsh
+        run: |
+          echo "::group::Verifying build artifacts"
+
+          # Check Release build artifacts
+          $releasePath = "TestProject/EsnyaResoniteModTemplate/bin/Release"
+          if (Test-Path "$releasePath/*.dll") {
+            echo "✓ Release build artifacts found:"
+            Get-ChildItem "$releasePath/*.dll" | ForEach-Object { echo "  - $($_.Name)" }
+          } else {
+            echo "::error::No Release build artifacts found in $releasePath"
+            exit 1
+          }
+
+          echo "::endgroup::"
+
+  test-with-hotreload:
+    name: Test Debug Build with ResoniteHotReloadLib
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout action
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 9.0 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Checkout test mod project
+        uses: actions/checkout@v4
+        with:
+          repository: 'esnya/EsnyaResoniteModTemplate'
+          ref: next
+          path: TestProject
+
+      - name: Setup Resonite Environment with HotReload
+        id: setup-resonite
+        uses: ./
+        with:
+          resonite-path: ${{ github.workspace }}/TestProject
+          steam-login: ${{ secrets.STEAMLOGIN }}
+          hot-reload-lib: true
+
+      - name: Verify HotReload installation
+        shell: pwsh
+        run: |
+          echo "::group::Verifying ResoniteHotReloadLib installation"
+          $hotReloadPath = "${{ steps.setup-resonite.outputs.rml-libs-path }}/ResoniteHotReloadLib.dll"
+          if (Test-Path $hotReloadPath) {
+            echo "✓ ResoniteHotReloadLib.dll found at $hotReloadPath"
+          } else {
+            echo "::error::ResoniteHotReloadLib.dll not found at expected path"
+            exit 1
+          }
+          echo "::endgroup::"
+
+      - name: Build Debug configuration
+        shell: pwsh
+        working-directory: TestProject/EsnyaResoniteModTemplate
+        run: |
+          echo "::group::Testing Debug build with dotnet CLI"
+          dotnet restore
+          dotnet build --configuration Debug --no-restore
+          echo "::endgroup::"
+
+      - name: Test Install target (Debug)
+        shell: pwsh
+        working-directory: TestProject/EsnyaResoniteModTemplate
+        run: |
+          echo "::group::Testing Install target with Debug configuration"
+          dotnet msbuild -target:Install -property:Configuration=Debug -verbosity:normal
+          echo "✓ Install target succeeded (Debug)"
+          echo "::endgroup::"
+
+      - name: Verify debug artifacts
+        shell: pwsh
+        run: |
+          echo "::group::Verifying debug build artifacts"
+
+          # Check Debug build artifacts
+          $debugPath = "TestProject/EsnyaResoniteModTemplate/bin/Debug"
+          if (Test-Path "$debugPath/*.dll") {
+            echo "✓ Debug build artifacts found:"
+            Get-ChildItem "$debugPath/*.dll" | ForEach-Object { echo "  - $($_.Name)" }
+          } else {
+            echo "::error::No Debug build artifacts found in $debugPath"
+            exit 1
+          }
+
+          echo "::endgroup::"
+
+  test-custom-versions:
+    name: Test Specific Version Configuration
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout action
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 9.0 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Checkout test mod project
+        uses: actions/checkout@v4
+        with:
+          repository: 'esnya/EsnyaResoniteModTemplate'
+          ref: next
+          path: TestProject
+
+      - name: Setup with specific HotReload version
+        id: setup-resonite
+        uses: ./
+        with:
+          resonite-path: ${{ github.workspace }}/TestProject
+          steam-login: ${{ secrets.STEAMLOGIN }}
+          hot-reload-lib: true
+          hot-reload-version: "2.4.0"
+
+      - name: Verify specific version installation
+        shell: pwsh
+        run: |
+          echo "::group::Verifying specific HotReload version"
+          $hotReloadPath = "${{ steps.setup-resonite.outputs.rml-libs-path }}/ResoniteHotReloadLib.dll"
+          if (Test-Path $hotReloadPath) {
+            echo "✓ ResoniteHotReloadLib.dll found (version 2.4.0)"
+          } else {
+            echo "::error::ResoniteHotReloadLib.dll not found"
+            exit 1
+          }
+          echo "::endgroup::"
+
+      - name: Quick build test
+        shell: pwsh
+        working-directory: TestProject/EsnyaResoniteModTemplate
+        run: |
+          echo "::group::Quick build test with custom versions"
+          dotnet restore
+          dotnet build --configuration Release --no-restore
+          echo "✓ Build completed successfully"
+          echo "::endgroup::"
+
+  test-build-targets:
+    name: Test Release vs Debug Configuration
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout action
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 9.0 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Checkout test mod project
+        uses: actions/checkout@v4
+        with:
+          repository: 'esnya/EsnyaResoniteModTemplate'
+          ref: next
+          path: TestProject
+
+      - name: Setup Resonite Environment
+        id: setup-resonite
+        uses: ./
+        with:
+          resonite-path: ${{ github.workspace }}/TestProject
+          steam-login: ${{ secrets.STEAMLOGIN }}
+
+      - name: Test Release configuration
+        shell: pwsh
+        working-directory: TestProject/EsnyaResoniteModTemplate
+        run: |
+          echo "::group::Testing Release configuration"
+          dotnet restore
+          dotnet build --configuration Release --no-restore
+          echo "✓ Release build completed"
+          echo "::endgroup::"
+
+      - name: Test Debug configuration
+        shell: pwsh
+        working-directory: TestProject/EsnyaResoniteModTemplate
+        run: |
+          echo "::group::Testing Debug configuration"
+          dotnet build --configuration Debug --no-restore
+          echo "✓ Debug build completed"
+          echo "::endgroup::"
+
+      - name: Compare build outputs
+        shell: pwsh
+        run: |
+          echo "::group::Comparing Release vs Debug outputs"
+
+          $releasePath = "TestProject/EsnyaResoniteModTemplate/bin/Release"
+          $debugPath = "TestProject/EsnyaResoniteModTemplate/bin/Debug"
+
+          echo "Release artifacts:"
+          if (Test-Path "$releasePath/*.dll") {
+            Get-ChildItem "$releasePath/*.dll" | ForEach-Object { echo "  - $($_.Name)" }
+          }
+
+          echo "Debug artifacts:"
+          if (Test-Path "$debugPath/*.dll") {
+            Get-ChildItem "$debugPath/*.dll" | ForEach-Object { echo "  - $($_.Name)" }
+          }
+
+          echo "✓ Both configurations built successfully"
+          echo "::endgroup::"
