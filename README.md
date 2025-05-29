@@ -1,4 +1,4 @@
-# Setup Resonite Mod Environment
+# Setup RML Environment
 
 This GitHub Action sets up and caches the Resonite game files and ResoniteModLoader for mod development. It's designed to work like other `setup-*` actions, focusing on environment preparation while leaving the actual build process to the user.
 
@@ -68,7 +68,7 @@ jobs:
 
       - name: Setup Resonite Environment
         id: setup-resonite
-        uses: esnya/setup-resonite-mod-env@v2
+        uses: esnya/setup-rml-env@v2
         with:
           steam-login: ${{ secrets.STEAM_LOGIN }}
 
@@ -117,7 +117,7 @@ jobs:
 
       - name: Setup Resonite Environment
         id: setup-resonite
-        uses: esnya/setup-resonite-mod-env@v2
+        uses: esnya/setup-rml-env@v2
         with:
           resonite-path: ${{ github.workspace }}/MyModProject
           steam-login: ${{ secrets.STEAM_LOGIN }}
@@ -168,7 +168,7 @@ jobs:
 
       - name: Setup Resonite Environment with Hot Reload
         id: setup-resonite
-        uses: esnya/setup-resonite-mod-env@v2
+        uses: esnya/setup-rml-env@v2
         with:
           steam-login: ${{ secrets.STEAM_LOGIN }}
           hot-reload-lib: true
@@ -190,8 +190,8 @@ If you're migrating from the previous `build-rml-mod` action, here are the key c
 
 ### What Changed
 
-- **Action renamed**: `build-rml-mod` → `setup-resonite-mod-env`
-- **Repository renamed**: `build-rml-mod` → `setup-resonite-mod-env`
+- **Action renamed**: `build-rml-mod` → `setup-rml-env`
+- **Repository renamed**: `build-rml-mod` → `setup-rml-env`
 - **Focus changed**: Now only handles environment setup, not building
 - **Build system**: Uses MSBuild for .NET Framework 4.7.2 compatibility
 - **Input names**: `project` → `resonite-path`, removed build-specific inputs
@@ -207,7 +207,7 @@ If you're migrating from the previous `build-rml-mod` action, here are the key c
    uses: esnya/build-rml-mod@v1
 
    # After
-   uses: esnya/setup-resonite-mod-env@v2
+   uses: esnya/setup-rml-env@v2
    ```
 
 2. **Update inputs**:
@@ -271,7 +271,7 @@ The action automatically detects the version and downloads the appropriate files
   uses: microsoft/setup-msbuild@v2
 
 - name: Setup Resonite Environment with Hot Reload
-  uses: esnya/setup-resonite-mod-env@v2
+  uses: esnya/setup-rml-env@v2
   with:
     steam-login: ${{ secrets.STEAM_LOGIN }}
     hot-reload-lib: true

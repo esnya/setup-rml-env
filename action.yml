@@ -1,4 +1,4 @@
-name: Setup Resonite Mod Environment
+name: Setup RML Environment
 description: Setup and cache Resonite game files and ResoniteModLoader for mod development
 inputs:
   resonite-path:
