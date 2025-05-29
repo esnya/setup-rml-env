@@ -2,9 +2,11 @@ name: Test Setup Action
 
 on:
   push:
-    branches: [main, develop]
+    branches:
+      - v*
   pull_request:
-    branches: [main]
+    branches:
+      - v*
   workflow_dispatch:
 
 env:
