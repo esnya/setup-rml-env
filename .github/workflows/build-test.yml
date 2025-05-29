@@ -40,7 +40,7 @@ jobs:
         id: setup-resonite
         uses: ./
         with:
-          resonite-path: ${{ github.workspace }}/TestProject
+          resonite-path: ${{ github.workspace }}/Resonite
           steam-login: ${{ secrets.STEAMLOGIN }}
 
       - name: Verify outputs
@@ -120,7 +120,7 @@ jobs:
         id: setup-resonite
         uses: ./
         with:
-          resonite-path: ${{ github.workspace }}/TestProject
+          resonite-path: ${{ github.workspace }}/Resonite
           steam-login: ${{ secrets.STEAMLOGIN }}
           hot-reload-lib: true
 
@@ -203,7 +203,7 @@ jobs:
         id: setup-resonite
         uses: ./
         with:
-          resonite-path: ${{ github.workspace }}/TestProject
+          resonite-path: ${{ github.workspace }}/Resonite
           steam-login: ${{ secrets.STEAMLOGIN }}
           hot-reload-lib: true
           hot-reload-version: "2.4.0"
@@ -260,7 +260,7 @@ jobs:
         id: setup-resonite
         uses: ./
         with:
-          resonite-path: ${{ github.workspace }}/TestProject
+          resonite-path: ${{ github.workspace }}/Resonite
           steam-login: ${{ secrets.STEAMLOGIN }}
 
       - name: Test Release configuration
