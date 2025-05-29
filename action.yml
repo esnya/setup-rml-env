@@ -97,11 +97,22 @@ runs:
         $rmlDllPath = Join-Path "${{ steps.setup-paths.outputs.libraries-path }}" "ResoniteModLoader.dll"
         $harmonyDllPath = Join-Path "${{ steps.setup-paths.outputs.rml-libs-path }}" "0Harmony.dll"
 
-        echo "Downloading ResoniteModLoader.dll..."
-        Invoke-WebRequest -Uri "$downloadUrl/ResoniteModLoader.dll" -OutFile $rmlDllPath
+        try {
+          echo "Downloading ResoniteModLoader.dll..."
+          Invoke-WebRequest -Uri "$downloadUrl/ResoniteModLoader.dll" -OutFile $rmlDllPath -ErrorAction Stop
+          echo "✓ ResoniteModLoader.dll downloaded successfully"
 
-        echo "Downloading 0Harmony.dll..."
-        Invoke-WebRequest -Uri "$downloadUrl/0Harmony.dll" -OutFile $harmonyDllPath
+          echo "Downloading 0Harmony.dll..."
+          Invoke-WebRequest -Uri "$downloadUrl/0Harmony.dll" -OutFile $harmonyDllPath -ErrorAction Stop
+          echo "✓ 0Harmony.dll downloaded successfully"
+        } catch {
+          echo "::error::Failed to download ResoniteModLoader files"
+          echo "::error::Error: $($_.Exception.Message)"
+          if ($_.Exception.Response) {
+            echo "::error::HTTP Status: $($_.Exception.Response.StatusCode)"
+          }
+          throw
+        }
 
         echo "::notice::ResoniteModLoader (latest) installed successfully"
         echo "::endgroup::"
