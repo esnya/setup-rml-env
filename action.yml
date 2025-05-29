@@ -19,20 +19,10 @@ inputs:
     description: 'Custom cache key for the Resonite installation. If not provided, auto-generated from app-id'
     required: false
 
-  rml-version:
-    description: 'ResoniteModLoader version to install (latest, or specific version like v2.0.0)'
-    required: false
-    default: 'latest'
-
   hot-reload-lib:
     description: 'Whether to install ResoniteHotReloadLib (true/false)'
     required: false
     default: 'false'
-
-  hot-reload-version:
-    description: 'ResoniteHotReloadLib version to install (latest, or specific version like v3.0.0-RML)'
-    required: false
-    default: 'latest'
 
 outputs:
   resonite-path:
@@ -55,6 +45,9 @@ runs:
       shell: pwsh
       run: |
         $resonitePath = "${{ inputs.resonite-path }}"
+        if ($resonitePath[-1] -ne [IO.Path]::DirectorySeparatorChar) {
+          $resonitePath += [IO.Path]::DirectorySeparatorChar
+        }
         $librariesPath = Join-Path $resonitePath "Libraries"
         $rmlLibsPath = Join-Path $resonitePath "rml_libs"
 
@@ -97,14 +90,9 @@ runs:
       run: |
         echo "::group::Installing ResoniteModLoader"
 
-        $rmlVersion = "${{ inputs.rml-version }}"
+        # Fixed to latest version
         $baseUrl = "https://github.com/resonite-modding-group/ResoniteModLoader/releases"
-
-        if ($rmlVersion -eq "latest") {
-          $downloadUrl = "$baseUrl/latest/download"
-        } else {
-          $downloadUrl = "$baseUrl/download/$rmlVersion"
-        }
+        $downloadUrl = "$baseUrl/latest/download"
 
         $rmlDllPath = Join-Path "${{ steps.setup-paths.outputs.libraries-path }}" "ResoniteModLoader.dll"
         $harmonyDllPath = Join-Path "${{ steps.setup-paths.outputs.rml-libs-path }}" "0Harmony.dll"
@@ -115,7 +103,7 @@ runs:
         echo "Downloading 0Harmony.dll..."
         Invoke-WebRequest -Uri "$downloadUrl/0Harmony.dll" -OutFile $harmonyDllPath
 
-        echo "::notice::ResoniteModLoader $rmlVersion installed successfully"
+        echo "::notice::ResoniteModLoader (latest) installed successfully"
         echo "::endgroup::"
 
     - name: Install ResoniteHotReloadLib
@@ -124,34 +112,39 @@ runs:
       run: |
         echo "::group::Installing ResoniteHotReloadLib"
 
-        $hotReloadVersion = "${{ inputs.hot-reload-version }}"
+        # Fixed to v3.0.0-RML version
+        $hotReloadVersion = "v3.0.0-RML"
         $baseUrl = "https://github.com/Nytra/ResoniteHotReloadLib/releases"
-
-        if ($hotReloadVersion -eq "latest") {
-          # Get the latest release tag
-          $latestRelease = Invoke-RestMethod -Uri "$baseUrl/latest" -Headers @{ "Accept" = "application/vnd.github.v3+json" }
-          $hotReloadVersion = $latestRelease.tag_name
-          echo "Latest ResoniteHotReloadLib version: $hotReloadVersion"
-        }
-
         $downloadUrl = "$baseUrl/download/$hotReloadVersion"
         $rmlLibsPath = "${{ steps.setup-paths.outputs.rml-libs-path }}"
 
         # Download ResoniteHotReloadLib.dll
         $hotReloadDllPath = Join-Path $rmlLibsPath "ResoniteHotReloadLib.dll"
-        echo "Downloading ResoniteHotReloadLib.dll..."
-        Invoke-WebRequest -Uri "$downloadUrl/ResoniteHotReloadLib.dll" -OutFile $hotReloadDllPath
+        $mainDllUrl = "$downloadUrl/ResoniteHotReloadLib.dll"
+        echo "Downloading ResoniteHotReloadLib.dll from: $mainDllUrl"
 
-        # Check if this version has Core.dll (v3.0.0-RML and later)
-        if ($hotReloadVersion -like "*-RML*" -or ($hotReloadVersion -match "v?(\d+)\.(\d+)\.(\d+)" -and [version]"$($Matches[1]).$($Matches[2]).$($Matches[3])" -ge [version]"3.0.0")) {
-          $hotReloadCoreDllPath = Join-Path $rmlLibsPath "ResoniteHotReloadLibCore.dll"
-          echo "Downloading ResoniteHotReloadLibCore.dll..."
-          try {
-            Invoke-WebRequest -Uri "$downloadUrl/ResoniteHotReloadLibCore.dll" -OutFile $hotReloadCoreDllPath
-            echo "✓ ResoniteHotReloadLibCore.dll downloaded"
-          } catch {
-            echo "::warning::ResoniteHotReloadLibCore.dll not found for version $hotReloadVersion, skipping..."
+        try {
+          Invoke-WebRequest -Uri $mainDllUrl -OutFile $hotReloadDllPath -ErrorAction Stop
+          echo "✓ ResoniteHotReloadLib.dll downloaded successfully"
+        } catch {
+          echo "::error::Failed to download ResoniteHotReloadLib.dll from $mainDllUrl"
+          echo "::error::Error: $($_.Exception.Message)"
+          if ($_.Exception.Response) {
+            echo "::error::HTTP Status: $($_.Exception.Response.StatusCode)"
           }
+          throw
+        }
+
+        # Try to download ResoniteHotReloadLibCore.dll (optional for newer versions)
+        $hotReloadCoreDllPath = Join-Path $rmlLibsPath "ResoniteHotReloadLibCore.dll"
+        $coreDllUrl = "$downloadUrl/ResoniteHotReloadLibCore.dll"
+        echo "Attempting to download ResoniteHotReloadLibCore.dll from: $coreDllUrl"
+        try {
+          Invoke-WebRequest -Uri $coreDllUrl -OutFile $hotReloadCoreDllPath -ErrorAction Stop
+          echo "✓ ResoniteHotReloadLibCore.dll downloaded successfully"
+        } catch {
+          echo "::warning::ResoniteHotReloadLibCore.dll not found for version $hotReloadVersion"
+          echo "::warning::This is optional and may not be available for all versions. Continuing..."
         }
 
         echo "::notice::ResoniteHotReloadLib $hotReloadVersion installed successfully"

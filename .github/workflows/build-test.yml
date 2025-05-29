@@ -33,14 +33,13 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: 'esnya/EsnyaResoniteModTemplate'
-          ref: next
           path: TestProject
 
       - name: Setup Resonite Environment
         id: setup-resonite
         uses: ./
         with:
-          resonite-path: ${{ github.workspace }}/Resonite
+          resonite-path: ${{ github.workspace }}/TestProject/Resonite
           steam-login: ${{ secrets.STEAMLOGIN }}
 
       - name: Verify outputs
@@ -55,24 +54,24 @@ jobs:
 
       - name: Build Release configuration
         shell: pwsh
-        working-directory: TestProject/EsnyaResoniteModTemplate
+        working-directory: TestProject
         env:
           ResonitePath: ${{ steps.setup-resonite.outputs.resonite-path }}
         run: |
           echo "::group::Testing Release build with dotnet CLI"
           dotnet restore
-          dotnet build --configuration Release --no-restore -p:ResonitePath="${{ steps.setup-resonite.outputs.resonite-path }}"
+          dotnet build --configuration Release --no-restore
           echo "::endgroup::"
 
       - name: Test Install target (Release)
         shell: pwsh
-        working-directory: TestProject/EsnyaResoniteModTemplate
+        working-directory: TestProject
         env:
           ResonitePath: ${{ steps.setup-resonite.outputs.resonite-path }}
         run: |
           echo "::group::Testing Install target with Release configuration"
           # Note: Assumes project has Install target defined in .csproj
-          dotnet msbuild -target:Install -property:Configuration=Release -property:ResonitePath="${{ steps.setup-resonite.outputs.resonite-path }}" -verbosity:normal
+          dotnet msbuild -target:Install -property:Configuration=Release -verbosity:normal
           echo "✓ Install target succeeded (Release)"
           echo "::endgroup::"
 
@@ -113,14 +112,13 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: 'esnya/EsnyaResoniteModTemplate'
-          ref: next
           path: TestProject
 
       - name: Setup Resonite Environment with HotReload
         id: setup-resonite
         uses: ./
         with:
-          resonite-path: ${{ github.workspace }}/Resonite
+          resonite-path: ${{ github.workspace }}/TestProject/Resonite
           steam-login: ${{ secrets.STEAMLOGIN }}
           hot-reload-lib: true
 
@@ -139,23 +137,23 @@ jobs:
 
       - name: Build Debug configuration
         shell: pwsh
-        working-directory: TestProject/EsnyaResoniteModTemplate
+        working-directory: TestProject
         env:
           ResonitePath: ${{ steps.setup-resonite.outputs.resonite-path }}
         run: |
           echo "::group::Testing Debug build with dotnet CLI"
           dotnet restore
-          dotnet build --configuration Debug --no-restore -p:ResonitePath="${{ steps.setup-resonite.outputs.resonite-path }}"
+          dotnet build --configuration Debug --no-restore
           echo "::endgroup::"
 
       - name: Test Install target (Debug)
         shell: pwsh
-        working-directory: TestProject/EsnyaResoniteModTemplate
+        working-directory: TestProject
         env:
           ResonitePath: ${{ steps.setup-resonite.outputs.resonite-path }}
         run: |
           echo "::group::Testing Install target with Debug configuration"
-          dotnet msbuild -target:Install -property:Configuration=Debug -property:ResonitePath="${{ steps.setup-resonite.outputs.resonite-path }}" -verbosity:normal
+          dotnet msbuild -target:Install -property:Configuration=Debug -verbosity:normal
           echo "✓ Install target succeeded (Debug)"
           echo "::endgroup::"
 
@@ -174,135 +172,4 @@ jobs:
             exit 1
           }
 
-          echo "::endgroup::"
-
-  test-custom-versions:
-    name: Test Specific Version Configuration
-    runs-on: windows-latest
-
-    steps:
-      - name: Checkout action
-        uses: actions/checkout@v4
-
-      - name: Setup .NET 9.0 SDK
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '9.0.x'
-
-      - name: Setup MSBuild
-        uses: microsoft/setup-msbuild@v2
-
-      - name: Checkout test mod project
-        uses: actions/checkout@v4
-        with:
-          repository: 'esnya/EsnyaResoniteModTemplate'
-          ref: next
-          path: TestProject
-
-      - name: Setup with specific HotReload version
-        id: setup-resonite
-        uses: ./
-        with:
-          resonite-path: ${{ github.workspace }}/Resonite
-          steam-login: ${{ secrets.STEAMLOGIN }}
-          hot-reload-lib: true
-          hot-reload-version: "2.4.0"
-
-      - name: Verify specific version installation
-        shell: pwsh
-        run: |
-          echo "::group::Verifying specific HotReload version"
-          $hotReloadPath = "${{ steps.setup-resonite.outputs.rml-libs-path }}/ResoniteHotReloadLib.dll"
-          if (Test-Path $hotReloadPath) {
-            echo "✓ ResoniteHotReloadLib.dll found (version 2.4.0)"
-          } else {
-            echo "::error::ResoniteHotReloadLib.dll not found"
-            exit 1
-          }
-          echo "::endgroup::"
-
-      - name: Quick build test
-        shell: pwsh
-        working-directory: TestProject/EsnyaResoniteModTemplate
-        env:
-          ResonitePath: ${{ steps.setup-resonite.outputs.resonite-path }}
-        run: |
-          echo "::group::Quick build test with custom versions"
-          dotnet restore
-          dotnet build --configuration Release --no-restore -p:ResonitePath="${{ steps.setup-resonite.outputs.resonite-path }}"
-          echo "✓ Build completed successfully"
-          echo "::endgroup::"
-
-  test-build-targets:
-    name: Test Release vs Debug Configuration
-    runs-on: windows-latest
-
-    steps:
-      - name: Checkout action
-        uses: actions/checkout@v4
-
-      - name: Setup .NET 9.0 SDK
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '9.0.x'
-
-      - name: Setup MSBuild
-        uses: microsoft/setup-msbuild@v2
-
-      - name: Checkout test mod project
-        uses: actions/checkout@v4
-        with:
-          repository: 'esnya/EsnyaResoniteModTemplate'
-          ref: next
-          path: TestProject
-
-      - name: Setup Resonite Environment
-        id: setup-resonite
-        uses: ./
-        with:
-          resonite-path: ${{ github.workspace }}/Resonite
-          steam-login: ${{ secrets.STEAMLOGIN }}
-
-      - name: Test Release configuration
-        shell: pwsh
-        working-directory: TestProject/EsnyaResoniteModTemplate
-        env:
-          ResonitePath: ${{ steps.setup-resonite.outputs.resonite-path }}
-        run: |
-          echo "::group::Testing Release configuration"
-          dotnet restore
-          dotnet build --configuration Release --no-restore -p:ResonitePath="${{ steps.setup-resonite.outputs.resonite-path }}"
-          echo "✓ Release build completed"
-          echo "::endgroup::"
-
-      - name: Test Debug configuration
-        shell: pwsh
-        working-directory: TestProject/EsnyaResoniteModTemplate
-        env:
-          ResonitePath: ${{ steps.setup-resonite.outputs.resonite-path }}
-        run: |
-          echo "::group::Testing Debug configuration"
-          dotnet build --configuration Debug --no-restore -p:ResonitePath="${{ steps.setup-resonite.outputs.resonite-path }}"
-          echo "✓ Debug build completed"
-          echo "::endgroup::"
-
-      - name: Compare build outputs
-        shell: pwsh
-        run: |
-          echo "::group::Comparing Release vs Debug outputs"
-
-          $releasePath = "TestProject/EsnyaResoniteModTemplate/bin/Release"
-          $debugPath = "TestProject/EsnyaResoniteModTemplate/bin/Debug"
-
-          echo "Release artifacts:"
-          if (Test-Path "$releasePath/*.dll") {
-            Get-ChildItem "$releasePath/*.dll" | ForEach-Object { echo "  - $($_.Name)" }
-          }
-
-          echo "Debug artifacts:"
-          if (Test-Path "$debugPath/*.dll") {
-            Get-ChildItem "$debugPath/*.dll" | ForEach-Object { echo "  - $($_.Name)" }
-          }
-
-          echo "✓ Both configurations built successfully"
           echo "::endgroup::"

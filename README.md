@@ -9,7 +9,6 @@ This GitHub Action sets up and caches the Resonite game files and ResoniteModLoa
 - 🔧 **ResoniteModLoader Setup**: Automatically installs ResoniteModLoader and dependencies
 - 🔥 **ResoniteHotReloadLib Support**: Optional installation of ResoniteHotReloadLib for hot-reload development
 - ✅ **Environment Verification**: Validates that all components are properly installed
-- 🏷️ **Flexible Versioning**: Support for specific ResoniteModLoader and ResoniteHotReloadLib versions
 - 📊 **Rich Outputs**: Provides paths and cache status for downstream steps
 
 ## License
@@ -20,13 +19,11 @@ This project/action is licensed under the [MIT License](./LICENSE).
 
 | **Input**         | **Description**                                                                         | **Default**                           | **Required** |
 |-------------------|-----------------------------------------------------------------------------------------|---------------------------------------|--------------|
-| `resonite-path`   | Path to the directory where Resonite will be installed                                  | `${{ github.workspace }}/Resonite` | No           |
+| `resonite-path`   | Path to the directory where Resonite will be installed                                  | `${{ github.workspace }}/Resonite`    | No           |
 | `steam-login`     | Login credentials for SteamCMD in the format `"<username> <password>"`                  |                                       | Yes          |
 | `app-id`          | Steam App ID for Resonite                                                               | `2519830`                             | No           |
 | `cache-key`       | Custom cache key for the Resonite installation                                          | Auto-generated from app-id            | No           |
-| `rml-version`     | ResoniteModLoader version to install (`latest` or specific version like `v2.0.0`)       | `latest`                              | No           |
 | `hot-reload-lib`  | Whether to install ResoniteHotReloadLib (`true` or `false`)                             | `false`                               | No           |
-| `hot-reload-version` | ResoniteHotReloadLib version to install (`latest` or specific version like `v2.1.1`) | `latest`                              | No           |
 
 ## Outputs
 
@@ -122,7 +119,6 @@ jobs:
           resonite-path: ${{ github.workspace }}/MyModProject
           steam-login: ${{ secrets.STEAM_LOGIN }}
           hot-reload-lib: true
-          hot-reload-version: v3.0.0-RML
           cache-key: my-custom-cache-key-v1
 
       - name: Use setup outputs
@@ -172,7 +168,6 @@ jobs:
         with:
           steam-login: ${{ secrets.STEAM_LOGIN }}
           hot-reload-lib: true
-          hot-reload-version: latest
 
       - name: Restore dependencies
         run: dotnet restore
@@ -252,13 +247,6 @@ If you're migrating from the previous `build-rml-mod` action, here are the key c
 
 This action optionally supports installing [ResoniteHotReloadLib](https://github.com/Nytra/ResoniteHotReloadLib), which enables hot-reload functionality for mod development.
 
-### Version Compatibility
-
-- **v3.0.0-RML and later**: Includes both `ResoniteHotReloadLib.dll` and `ResoniteHotReloadLibCore.dll`
-- **Earlier versions**: Only includes `ResoniteHotReloadLib.dll`
-
-The action automatically detects the version and downloads the appropriate files.
-
 ### Usage
 
 ```yaml
@@ -275,7 +263,6 @@ The action automatically detects the version and downloads the appropriate files
   with:
     steam-login: ${{ secrets.STEAM_LOGIN }}
     hot-reload-lib: true
-    hot-reload-version: latest  # or specific version like 'v3.0.0-RML'
 
 - name: Build Debug mod with Hot Reload
   run: |
@@ -294,7 +281,6 @@ The action automatically detects the version and downloads the appropriate files
 
 - **Steam Credentials**: Store your Steam username and password in repository secrets as `STEAM_LOGIN` in the format `"username password"`
 - **Caching**: The action automatically caches Resonite installation. Cache duration follows GitHub's cache policies
-- **Version Pinning**: For reproducible builds, consider pinning `rml-version` and `hot-reload-version` to specific versions rather than using `latest`
 - **.NET Framework 4.7.2**: This action targets .NET Framework 4.7.2 projects, but uses .NET 9.0 SDK's `dotnet` CLI for building
 - **Hot Reload Development**: Enable `hot-reload-lib: true` for Debug builds to enable faster mod development iterations
 - **Configuration Strategy**: Use Release builds for production/releases, Debug builds with hot-reload for development
