@@ -33,7 +33,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: 'esnya/EsnyaResoniteModTemplate'
-          ref: next
           path: TestProject
 
       - name: Setup Resonite Environment
@@ -113,7 +112,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: 'esnya/EsnyaResoniteModTemplate'
-          ref: next
           path: TestProject
 
       - name: Setup Resonite Environment with HotReload
@@ -196,7 +194,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: 'esnya/EsnyaResoniteModTemplate'
-          ref: next
           path: TestProject
 
       - name: Setup with specific HotReload version
@@ -253,7 +250,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: 'esnya/EsnyaResoniteModTemplate'
-          ref: next
           path: TestProject
 
       - name: Setup Resonite Environment
